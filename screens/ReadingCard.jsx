@@ -1,6 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { onSnapshot, doc, collection } from 'firebase/firestore';
+import { db } from '../firebase';
+import { getAllDays } from '../services/FirestoreServices';
+
 
 const ReadingCard = (props) => {
 
@@ -13,6 +18,37 @@ const ReadingCard = (props) => {
         {id: "3", temp: 12, time: "6:00"}
     ]
 
+    const [readings, setReadings] = useState([])
+
+    useFocusEffect(
+      React.useCallback(() => {
+
+        //1. specify where we want the data to be added
+        const dayRef = doc(db, "days", day.id) //specific doc's ID
+        //2. specify the subcollection in this document
+        const readingRef = collection(dayRef, "readings")
+
+          const unsubscribe = onSnapshot(readingRef, (querySnapshot) => {
+
+            const readingData = [];
+
+            querySnapshot.forEach((doc) => {
+                readingData.push(doc.data());
+                console.log("Current reading: ", doc.data());
+            });
+            
+            setReadings(readingData)
+          });
+
+        
+
+        return () => {
+          console.log("")
+          unsubscribe()
+        };
+        
+      }, []))
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>
@@ -22,11 +58,14 @@ const ReadingCard = (props) => {
       </Text>
 
       <View style={styles.readingsBlock}>
-        {dummyReadings.map((item) => (
-            <View style={styles.readingBubble} key={item.id}>
+
+        {readings != [] ? (
+          readings.map((item) => (
+            <View style={styles.readingBubble} key={item.time}>
                 <Text style={styles.readingText}>{item.temp}</Text>
             </View>
-        ))}
+        ))
+      ): <Text>no readings yet</Text>}
       </View>
       
     </View>
